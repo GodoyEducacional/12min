@@ -1,0 +1,1492 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Da Programação à Docência | Gabriel Santos de Godoy</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D Interactive Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              deepNavy: "#041026",
+              electricCyan: "#00d2ff",
+              vibrantBlue: "#0070f3",
+              darkSapphire: "#0b1d3a",
+              accentOrange: "#f59e0b",
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "sans-serif"],
+              mono: ["Fira Code", "Consolas", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      /* Smooth base setup */
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background-color: #030b19;
+        color: #f1f5f9;
+        overflow-x: hidden;
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #041026;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #00d2ff88;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #00d2ff;
+      }
+
+      /* 3D Background Canvas */
+      #bg-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      /* Glowing orbs representing the slide motif */
+      .glow-orb-primary {
+        box-shadow: 0 0 150px 60px rgba(0, 112, 243, 0.4);
+      }
+      .glow-orb-cyan {
+        box-shadow: 0 0 120px 40px rgba(0, 210, 255, 0.4);
+      }
+
+      /* Glassmorphism card styles - MELHORADO PARA LEITURA E EFEITO ABSURDO */
+      .glass-card {
+        background: rgba(
+          3,
+          8,
+          18,
+          0.9
+        ); /* Ainda mais escuro para contraste absoluto */
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border: 1px solid rgba(0, 210, 255, 0.15);
+        box-shadow:
+          0 40px 80px rgba(0, 0, 0, 0.9),
+          inset 0 0 20px rgba(0, 210, 255, 0.05);
+        transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Efeito de feixe de luz varrendo o cartão no hover */
+      .glass-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -150%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(
+          to right,
+          transparent,
+          rgba(0, 210, 255, 0.15),
+          transparent
+        );
+        transform: skewX(-25deg);
+        transition: all 0.7s ease;
+        pointer-events: none;
+        z-index: 1;
+      }
+      .glass-card:hover::before {
+        left: 200%;
+        transition: all 0.8s ease;
+      }
+
+      .glass-card:hover {
+        border-color: rgba(0, 210, 255, 0.5);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow:
+          0 40px 90px rgba(0, 112, 243, 0.4),
+          inset 0 0 40px rgba(0, 210, 255, 0.2);
+      }
+
+      /* Garantir que o texto fique acima do brilho */
+      .glass-card > * {
+        position: relative;
+        z-index: 2;
+      }
+
+      /* Slide Section Container */
+      .slide-section {
+        min-height: 100vh;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 1.5rem;
+        perspective: 1500px;
+      }
+
+      /* Zoom in/out trigger animation class */
+      .slide-content {
+        opacity: 0;
+        transform: scale(0.65) translateY(100px) rotateX(15deg);
+        filter: blur(15px);
+        transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: transform, opacity, filter;
+      }
+
+      .slide-content.active {
+        opacity: 1;
+        transform: scale(1) translateY(0) rotateX(0deg);
+        filter: blur(0px);
+      }
+
+      /* Animação em Cascata (Stagger) para os elementos internos do slide */
+      .slide-content > * {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .slide-content.active > *:nth-child(1) {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.1s;
+      }
+      .slide-content.active > *:nth-child(2) {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.3s;
+      }
+      .slide-content.active > *:nth-child(3) {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.5s;
+      }
+      .slide-content.active > *:nth-child(4) {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.7s;
+      }
+      .slide-content.active > *:nth-child(5) {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.9s;
+      }
+
+      /* Code Badge style */
+      .code-badge {
+        font-family: "Fira Code", monospace;
+        background: rgba(0, 210, 255, 0.12);
+        border: 1px solid rgba(0, 210, 255, 0.3);
+        color: #38bdf8;
+      }
+
+      /* Pulse Glow Keyframes */
+      @keyframes pulseGlow {
+        0%,
+        100% {
+          transform: scale(1) translate(0, 0);
+          opacity: 0.8;
+        }
+        50% {
+          transform: scale(1.08) translate(15px, -10px);
+          opacity: 1;
+        }
+      }
+      .animate-pulse-slow {
+        animation: pulseGlow 8s infinite alternate ease-in-out;
+      }
+      .animate-pulse-reverse {
+        animation: pulseGlow 10s infinite alternate-reverse ease-in-out;
+      }
+    </style>
+  </head>
+  <body class="selection:bg-cyan-500 selection:text-white">
+    <!-- 3D Background Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Sound Toggle & Presenter Nav Bar -->
+    <header
+      class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-darkSapphire/60 backdrop-blur-xl border-b border-cyan-500/30 shadow-lg"
+    >
+      <div class="flex items-center space-x-3">
+        <div class="relative flex h-3 w-3">
+          <span
+            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"
+          ></span>
+          <span
+            class="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"
+          ></span>
+        </div>
+        <span
+          class="text-sm uppercase tracking-widest text-cyan-300 font-extrabold drop-shadow-[0_0_8px_rgba(0,210,255,0.8)]"
+          >COMPARTILHANDO SABERES</span
+        >
+      </div>
+
+      <!-- Presentation Controls -->
+      <div class="flex items-center space-x-2 md:space-x-4">
+        <!-- Slide Counter Indicator -->
+        <div
+          class="glass-card px-4 py-1.5 rounded-full text-xs font-mono text-cyan-200 flex items-center space-x-2 border-cyan-500/40"
+        >
+          <i data-lucide="layers" class="w-4 h-4"></i>
+          <span id="current-slide-num" class="font-bold text-white">01</span>
+          <span class="text-slate-400">/</span>
+          <span class="font-bold">08</span>
+        </div>
+
+        <!-- Fullscreen / Focus Mode -->
+        <button
+          id="fullscreen-btn"
+          class="glass-card hover:bg-cyan-500/30 text-cyan-300 p-2 rounded-full text-xs transition-all shadow-md"
+          title="Alternar Tela Cheia"
+        >
+          <i data-lucide="maximize" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Key navigation help -->
+        <div
+          class="hidden lg:flex items-center text-[11px] text-slate-300 space-x-1 pl-2 font-medium"
+        >
+          <kbd
+            class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600 text-cyan-200 font-mono shadow"
+            >↓</kbd
+          >
+          <kbd
+            class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600 text-cyan-200 font-mono shadow"
+            >↑</kbd
+          >
+          <span>para navegar</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Progress Bar at top -->
+    <div class="fixed top-[61px] left-0 w-full h-[3px] bg-slate-900 z-50">
+      <div
+        id="scroll-progress"
+        class="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-teal-300 w-0 transition-all duration-150"
+      ></div>
+    </div>
+
+    <!-- Quick Floating Navigation Dots -->
+    <nav
+      class="fixed right-4 md:right-8 top-1/2 -translate-y-1/2 z-40 flex flex-col space-y-3"
+    >
+      <button
+        onclick="scrollToSlide(1)"
+        class="nav-dot w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"
+        data-index="1"
+        title="01 - Capa"
+      ></button>
+      <button
+        onclick="scrollToSlide(2)"
+        class="nav-dot w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"
+        data-index="2"
+        title="02 - Mudança de Perspectiva"
+      ></button>
+      <button
+        onclick="scrollToSlide(3)"
+        class="nav-dot w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"
+        data-index="3"
+        title="03 - Lógica da Programação"
+      ></button>
+      <button
+        onclick="scrollToSlide(4)"
+        class="nav-dot w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"
+        data-index="4"
+        title="04 - Relação com o Erro"
+      ></button>
+      <button
+        onclick="scrollToSlide(5)"
+        class="nav-dot w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"
+        data-index="5"
+        title="05 - Formas de Aprender"
+      ></button>
+      <button
+        onclick="scrollToSlide(6)"
+        class="nav-dot w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"
+        data-index="6"
+        title="06 - Aprender na Docência"
+      ></button>
+      <button
+        onclick="scrollToSlide(7)"
+        class="nav-dot w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"
+        data-index="7"
+        title="07 - Saberes Universais"
+      ></button>
+      <button
+        onclick="scrollToSlide(8)"
+        class="nav-dot w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"
+        data-index="8"
+        title="08 - Para Levar Com Você"
+      ></button>
+    </nav>
+
+    <!-- MAIN SCROLLABLE CONTENT WITH 8 SLIDES -->
+    <main class="relative z-10 w-full overflow-hidden">
+      <!-- ================= SLIDE 1: INTRO / CAPA ================= -->
+      <section id="slide-1" class="slide-section" data-slide="1">
+        <div class="slide-content max-w-5xl w-full mx-auto relative">
+          <!-- Floating Visual Orbs representing original slide layout -->
+          <div
+            class="absolute -top-16 -right-10 w-44 h-44 rounded-full bg-blue-600/30 blur-2xl glow-orb-primary pointer-events-none animate-pulse-slow"
+          ></div>
+          <div
+            class="absolute -bottom-10 right-28 w-24 h-24 rounded-full bg-cyan-400/30 blur-xl glow-orb-cyan pointer-events-none animate-pulse-reverse"
+          ></div>
+
+          <div
+            class="glass-card rounded-3xl p-8 md:p-14 border border-cyan-500/30 relative overflow-hidden text-center"
+          >
+            <!-- Top Tag -->
+            <div class="inline-block mb-8">
+              <div
+                class="px-5 py-2 rounded-full bg-cyan-500/10 text-cyan-300 font-mono text-sm border border-cyan-500/30 shadow-[0_0_15px_rgba(0,210,255,0.2)]"
+              >
+                01 / 08
+              </div>
+            </div>
+
+            <!-- Main Title Area -->
+            <div class="space-y-6 flex flex-col items-center">
+              <h2
+                class="text-xl md:text-2xl font-bold tracking-widest text-cyan-400 uppercase drop-shadow-[0_0_10px_rgba(0,210,255,0.5)]"
+              >
+                COMPARTILHANDO SABERES
+              </h2>
+
+              <h1
+                class="text-5xl sm:text-7xl md:text-8xl font-black tracking-tight text-white leading-tight my-6 drop-shadow-2xl"
+              >
+                Da Programação<br />
+                à
+                <span
+                  class="text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 via-sky-400 to-blue-600"
+                  >Docência</span
+                >
+              </h1>
+
+              <div
+                class="h-1.5 w-32 bg-gradient-to-r from-transparent via-cyan-400 to-transparent rounded-full my-6 opacity-80"
+              ></div>
+
+              <p
+                class="text-2xl md:text-3xl text-slate-200 font-medium max-w-3xl leading-relaxed"
+              >
+                O que ensinar me ensinou.
+              </p>
+            </div>
+
+            <!-- Author and Signature Formula -->
+            <div
+              class="mt-16 pt-8 border-t border-cyan-500/20 flex flex-col items-center gap-6"
+            >
+              <div>
+                <h2 class="text-2xl font-extrabold text-white tracking-wide">
+                  Gabriel Santos de Godoy
+                </h2>
+              </div>
+
+              <!-- Interactive Code Capsule -->
+              <div
+                class="code-badge px-6 py-4 rounded-2xl flex items-center space-x-3 shadow-[0_0_30px_rgba(0,210,255,0.15)] hover:shadow-[0_0_40px_rgba(0,210,255,0.4)] hover:border-cyan-400 transition-all cursor-default scale-110 mt-4"
+              >
+                <span class="text-emerald-400 text-sm">● run</span>
+                <span class="text-base md:text-lg font-bold"
+                  >{ aprender(); ensinar(); evoluir(); }</span
+                >
+              </div>
+            </div>
+
+            <!-- Scroll Down hint -->
+            <div
+              class="mt-10 flex items-center justify-center text-slate-400 text-xs font-mono space-x-2 animate-bounce"
+            >
+              <span>Role para iniciar a jornada</span>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-cyan-400"></i>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SLIDE 2: A MUDANÇA DE PERSPECTIVA ================= -->
+      <section id="slide-2" class="slide-section" data-slide="2">
+        <div class="slide-content max-w-5xl w-full mx-auto relative">
+          <!-- Floating large blue circle mimicking slide design -->
+          <div
+            class="absolute -top-12 -right-8 w-40 h-40 rounded-full bg-blue-600/30 blur-xl pointer-events-none"
+          ></div>
+
+          <div
+            class="glass-card rounded-3xl p-8 md:p-14 border border-cyan-500/30"
+          >
+            <div class="flex items-center justify-between mb-8">
+              <span
+                class="px-3.5 py-1 rounded-full code-badge text-xs font-mono"
+                >01 • A MUDANÇA DE PERSPECTIVA</span
+              >
+              <span class="text-xs font-mono text-slate-400">02 / 08</span>
+            </div>
+
+            <h2
+              class="text-3xl md:text-5xl font-extrabold text-white mb-4 tracking-tight"
+            >
+              Eu achava que ensinar era...
+            </h2>
+            <p class="text-slate-300 text-base md:text-lg mb-10 max-w-none">
+              A ilusão de que a excelência técnica é suficiente para transmitir
+              conhecimentos complexos.
+            </p>
+
+            <!-- 3 Columns for Dominar, Explicar, Demonstrar -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              <!-- Box 1 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-blue-500/20 group hover:border-cyan-400"
+              >
+                <div
+                  class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-cyan-300 mb-4 group-hover:scale-110 transition-transform"
+                >
+                  <i data-lucide="code-2" class="w-6 h-6"></i>
+                </div>
+                <h3
+                  class="text-xl font-bold text-white mb-2 flex items-center space-x-2"
+                >
+                  <span>DOMINAR</span>
+                </h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Conhecer linguagens, ferramentas, frameworks e conteúdos de
+                  ponta a ponta.
+                </p>
+              </div>
+
+              <!-- Box 2 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-blue-500/20 group hover:border-cyan-400"
+              >
+                <div
+                  class="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300 mb-4 group-hover:scale-110 transition-transform"
+                >
+                  <i data-lucide="message-square" class="w-6 h-6"></i>
+                </div>
+                <h3
+                  class="text-xl font-bold text-white mb-2 flex items-center space-x-2"
+                >
+                  <span>EXPLICAR</span>
+                </h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Apresentar todo o conteúdo de forma clara e estruturada.
+                </p>
+              </div>
+
+              <!-- Box 3 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-blue-500/20 group hover:border-cyan-400"
+              >
+                <div
+                  class="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-cyan-300 mb-4 group-hover:scale-110 transition-transform"
+                >
+                  <i data-lucide="play-circle" class="w-6 h-6"></i>
+                </div>
+                <h3
+                  class="text-xl font-bold text-white mb-2 flex items-center space-x-2"
+                >
+                  <span>DEMONSTRAR</span>
+                </h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Mostrar como fazer o código e chegar rapidamente ao resultado
+                  pronto.
+                </p>
+              </div>
+            </div>
+
+            <!-- The Paradigm Shift Banner -->
+            <div
+              class="p-6 md:p-8 rounded-2xl bg-gradient-to-r from-blue-950/80 via-slate-900/90 to-cyan-950/80 border border-cyan-400/40 relative overflow-hidden text-center"
+            >
+              <div
+                class="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-cyan-400/10 blur-xl"
+              ></div>
+              <p
+                class="text-base md:text-xl font-semibold text-rose-300 mb-2 flex items-center justify-center space-x-2"
+              >
+                <i
+                  data-lucide="alert-triangle"
+                  class="w-5 h-5 text-rose-400"
+                ></i>
+                <span
+                  >Saber fazer não significa, automaticamente, saber
+                  ensinar.</span
+                >
+              </p>
+              <p class="text-lg md:text-2xl font-bold text-cyan-200">
+                "Ensinar é criar condições para que o outro construa
+                conhecimento."
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SLIDE 3: A LÓGICA DA PROGRAMAÇÃO ================= -->
+      <section id="slide-3" class="slide-section" data-slide="3">
+        <div class="slide-content max-w-5xl w-full mx-auto relative">
+          <div
+            class="glass-card rounded-3xl p-8 md:p-14 border border-cyan-500/30"
+          >
+            <div class="flex items-center justify-between mb-8">
+              <span
+                class="px-3.5 py-1 rounded-full code-badge text-xs font-mono"
+                >02 • A LÓGICA DA PROGRAMAÇÃO</span
+              >
+              <span class="text-xs font-mono text-slate-400">03 / 08</span>
+            </div>
+
+            <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-3">
+              Resolver problemas é um processo.
+            </h2>
+            <p class="text-slate-300 text-base md:text-lg mb-10">
+              A metologia de engenharia de software aplicada diretamente à
+              pedagogia.
+            </p>
+
+            <!-- 4 Sequential Flow Steps -->
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10 relative"
+            >
+              <!-- Step 1 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/30 relative flex flex-col items-start hover:border-cyan-300"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-blue-600 text-white font-mono font-bold flex items-center justify-center text-sm shadow-md mb-4"
+                  >01</span
+                >
+                <h3 class="text-lg font-bold text-amber-400 mb-1">ENTENDER</h3>
+                <p class="text-sm text-slate-300">
+                  Identificar o problema central com clareza.
+                </p>
+                <div
+                  class="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-cyan-400 z-20"
+                >
+                  →
+                </div>
+              </div>
+
+              <!-- Step 2 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/30 relative flex flex-col items-start hover:border-cyan-300"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-cyan-500 text-slate-950 font-mono font-bold flex items-center justify-center text-sm shadow-md mb-4"
+                  >02</span
+                >
+                <h3 class="text-lg font-bold text-amber-400 mb-1">DIVIDIR</h3>
+                <p class="text-sm text-slate-300">
+                  Quebrar em etapas menores e assimiláveis.
+                </p>
+                <div
+                  class="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-cyan-400 z-20"
+                >
+                  →
+                </div>
+              </div>
+
+              <!-- Step 3 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/30 relative flex flex-col items-start hover:border-cyan-300"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-blue-600 text-white font-mono font-bold flex items-center justify-center text-sm shadow-md mb-4"
+                  >03</span
+                >
+                <h3 class="text-lg font-bold text-amber-400 mb-1">TESTAR</h3>
+                <p class="text-sm text-slate-300">
+                  Experimentar caminhos e hipóteses reais.
+                </p>
+                <div
+                  class="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-cyan-400 z-20"
+                >
+                  →
+                </div>
+              </div>
+
+              <!-- Step 4 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/30 relative flex flex-col items-start hover:border-cyan-300"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-cyan-400 text-slate-950 font-mono font-bold flex items-center justify-center text-sm shadow-md mb-4"
+                  >04</span
+                >
+                <h3 class="text-lg font-bold text-amber-400 mb-1">MELHORAR</h3>
+                <p class="text-sm text-slate-300">
+                  Analisar o feedback e ajustar com precisão.
+                </p>
+              </div>
+            </div>
+
+            <!-- Bottom Key Insight -->
+            <div
+              class="p-6 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 flex items-center space-x-4"
+            >
+              <div class="p-3 bg-cyan-500/20 rounded-xl text-cyan-300 shrink-0">
+                <i data-lucide="search" class="w-6 h-6"></i>
+              </div>
+              <p class="text-base md:text-xl font-medium text-slate-100">
+                Na sala de aula, a dificuldade
+                <span
+                  class="text-cyan-300 font-bold underline decoration-cyan-400 decoration-2"
+                  >também precisa ser investigada</span
+                >, e não apenas corrigida.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SLIDE 4: NOVA RELAÇÃO COM O ERRO ================= -->
+      <section id="slide-4" class="slide-section" data-slide="4">
+        <div class="slide-content max-w-5xl w-full mx-auto relative">
+          <div
+            class="glass-card rounded-3xl p-8 md:p-14 border border-cyan-500/30"
+          >
+            <div class="flex items-center justify-between mb-8">
+              <span
+                class="px-3.5 py-1 rounded-full code-badge text-xs font-mono"
+                >03 • UMA NOVA RELAÇÃO COM O ERRO</span
+              >
+              <span class="text-xs font-mono text-slate-400">04 / 08</span>
+            </div>
+
+            <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-2">
+              O erro também ensina.
+            </h2>
+            <p class="text-slate-300 text-base md:text-lg mb-8">
+              No código, um "Bug" é oportunidade de aprendizado. Por que na sala
+              de aula seria punição?
+            </p>
+
+            <!-- The Equation Block: ERRO ≠ FRACASSO -->
+            <div
+              class="flex items-center justify-center space-x-6 py-6 px-4 my-6 bg-slate-900/80 rounded-2xl border border-cyan-500/40"
+            >
+              <span
+                class="text-2xl md:text-4xl font-black text-rose-400 tracking-wider"
+                >ERRO</span
+              >
+              <span class="text-3xl md:text-5xl font-black text-cyan-400"
+                >≠</span
+              >
+              <span
+                class="text-2xl md:text-4xl font-black text-slate-400 tracking-wider"
+                >FRACASSO</span
+              >
+            </div>
+
+            <!-- 3 Columns Steps -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/20 text-center hover:border-cyan-400"
+              >
+                <div
+                  class="mx-auto w-12 h-12 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center mb-4"
+                >
+                  <i data-lucide="compass" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-1">EXPERIMENTAR</h3>
+                <p class="text-sm text-slate-300">
+                  Tentar uma possibilidade real sem o medo paralisante de errar.
+                </p>
+              </div>
+
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/20 text-center hover:border-cyan-400"
+              >
+                <div
+                  class="mx-auto w-12 h-12 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center mb-4"
+                >
+                  <i data-lucide="terminal" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-1">INVESTIGAR</h3>
+                <p class="text-sm text-slate-300">
+                  Entender a causa raiz do que aconteceu, sem culpar.
+                </p>
+              </div>
+
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/20 text-center hover:border-cyan-400"
+              >
+                <div
+                  class="mx-auto w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-4"
+                >
+                  <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-1">REFAZER</h3>
+                <p class="text-sm text-slate-300">
+                  Ajustar os erros com uma nova maturidade e tentar de novo.
+                </p>
+              </div>
+            </div>
+
+            <!-- Reflected Question -->
+            <div
+              class="p-6 rounded-2xl bg-gradient-to-r from-amber-500/20 via-slate-900 to-amber-500/10 border border-amber-500/40 flex items-start space-x-4"
+            >
+              <i
+                data-lucide="help-circle"
+                class="w-7 h-7 text-amber-400 shrink-0 mt-0.5"
+              ></i>
+              <div>
+                <span
+                  class="text-xs uppercase font-mono tracking-widest text-amber-400 font-bold"
+                  >Pergunta:</span
+                >
+                <p class="text-lg md:text-xl font-bold text-white mt-1">
+                  Estamos avaliando somente o resultado final ou também
+                  valorizamos o caminho percorrido?
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SLIDE 5: FORMAS DIFERENTES DE APRENDER ================= -->
+      <section id="slide-5" class="slide-section" data-slide="5">
+        <div class="slide-content max-w-5xl w-full mx-auto relative">
+          <div
+            class="glass-card rounded-3xl p-8 md:p-14 border border-cyan-500/30"
+          >
+            <div class="flex items-center justify-between mb-8">
+              <span
+                class="px-3.5 py-1 rounded-full code-badge text-xs font-mono"
+                >04 • APRENDIZADOS DIVERGENTES</span
+              >
+              <span class="text-xs font-mono text-slate-400">05 / 08</span>
+            </div>
+
+            <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-2">
+              Pessoas aprendem de formas diferentes.
+            </h2>
+            <p class="text-slate-300 text-base md:text-lg mb-8">
+              Uma explicação única nunca alcança todo mundo da mesma maneira.
+            </p>
+
+            <!-- 3 Student Personas Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <!-- Persona 1 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/30 flex flex-col justify-between"
+              >
+                <div>
+                  <span
+                    class="inline-block px-3 py-1 text-xs font-bold rounded bg-cyan-500/20 text-cyan-300 mb-3 uppercase"
+                    >Iniciante</span
+                  >
+                  <h3 class="text-xl font-bold text-white mb-2">
+                    QUEM ESTÁ COMEÇANDO
+                  </h3>
+                  <p class="text-sm text-slate-300 leading-relaxed">
+                    Precisa de orientações claras, exemplos práticos e
+                    acolhimento para desenvolver confiança e autonomia.
+                  </p>
+                </div>
+                <div
+                  class="mt-4 pt-4 border-t border-slate-700/60 flex items-center text-xs text-cyan-400 space-x-1"
+                >
+                  <i data-lucide="shield-check" class="w-4 h-4"></i>
+                  <span>Demanda acolhimento</span>
+                </div>
+              </div>
+
+              <!-- Persona 2 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/30 flex flex-col justify-between"
+              >
+                <div>
+                  <span
+                    class="inline-block px-3 py-1 text-xs font-bold rounded bg-blue-500/20 text-blue-300 mb-3 uppercase"
+                    >Intermediário</span
+                  >
+                  <h3 class="text-xl font-bold text-white mb-2">
+                    QUEM JÁ EXPERIMENTOU
+                  </h3>
+                  <p class="text-sm text-slate-300 leading-relaxed">
+                    Precisa de desafios estimulantes, projetos abertos e
+                    horizontes com novas possibilidades.
+                  </p>
+                </div>
+                <div
+                  class="mt-4 pt-4 border-t border-slate-700/60 flex items-center text-xs text-blue-400 space-x-1"
+                >
+                  <i data-lucide="zap" class="w-4 h-4"></i>
+                  <span>Demanda desafio</span>
+                </div>
+              </div>
+
+              <!-- Persona 3 -->
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/30 flex flex-col justify-between"
+              >
+                <div>
+                  <span
+                    class="inline-block px-3 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-300 mb-3 uppercase"
+                    >Atenção Especial</span
+                  >
+                  <h3 class="text-xl font-bold text-white mb-2">
+                    QUEM TEM DIFICULDADE
+                  </h3>
+                  <p class="text-sm text-slate-300 leading-relaxed">
+                    Pode precisar de uma metáfora alternativa, outro exemplo
+                    prático ou simplesmente mais tempo de digestão.
+                  </p>
+                </div>
+                <div
+                  class="mt-4 pt-4 border-t border-slate-700/60 flex items-center text-xs text-amber-400 space-x-1"
+                >
+                  <i data-lucide="clock" class="w-4 h-4"></i>
+                  <span>Demanda paciência e empatia</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Pillars -->
+            <div class="grid grid-cols-3 gap-3 md:gap-4 py-4 mb-6 text-center">
+              <div
+                class="p-3 bg-slate-900/60 rounded-xl border border-slate-800"
+              >
+                <span class="text-sm md:text-base font-bold text-cyan-400"
+                  >1. Observar</span
+                >
+              </div>
+              <div
+                class="p-3 bg-slate-900/60 rounded-xl border border-slate-800"
+              >
+                <span class="text-sm md:text-base font-bold text-cyan-400"
+                  >2. Escutar</span
+                >
+              </div>
+              <div
+                class="p-3 bg-slate-900/60 rounded-xl border border-slate-800"
+              >
+                <span class="text-sm md:text-base font-bold text-cyan-400"
+                  >3. Adaptar</span
+                >
+              </div>
+            </div>
+
+            <!-- Conclusion Box -->
+            <div
+              class="p-6 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 text-center"
+            >
+              <p class="text-lg md:text-xl font-semibold text-slate-200">
+                "Criar diferentes caminhos para aprender é parte do nosso
+                compromisso."
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SLIDE 6: APRENDER FAZ PARTE DA DOCÊNCIA ================= -->
+      <section id="slide-6" class="slide-section" data-slide="6">
+        <div class="slide-content max-w-5xl w-full mx-auto relative">
+          <div
+            class="glass-card rounded-3xl p-8 md:p-14 border border-cyan-500/30"
+          >
+            <div class="flex items-center justify-between mb-8">
+              <span
+                class="px-3.5 py-1 rounded-full code-badge text-xs font-mono"
+                >05 • APRENDER NA DOCÊNCIA</span
+              >
+              <span class="text-xs font-mono text-slate-400">06 / 08</span>
+            </div>
+
+            <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-2">
+              O professor também é aprendiz.
+            </h2>
+            <p class="text-slate-300 text-base md:text-lg mb-8">
+              Aprender não é uma fase anterior à docência, mas sim seu motor
+              perpétuo.
+            </p>
+
+            <!-- 3 Dynamic pillars -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/20 hover:border-cyan-400"
+              >
+                <div
+                  class="w-12 h-12 rounded-xl bg-blue-500/20 text-cyan-300 flex items-center justify-center mb-4"
+                >
+                  <i data-lucide="cpu" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">ATUALIZAR</h3>
+                <p class="text-sm text-slate-300">
+                  Acompanhar novas tecnologias, novas linguagens, ideias
+                  emergentes e conhecimentos.
+                </p>
+              </div>
+
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/20 hover:border-cyan-400"
+              >
+                <div
+                  class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center mb-4"
+                >
+                  <i data-lucide="flask-conical" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">EXPERIMENTAR</h3>
+                <p class="text-sm text-slate-300">
+                  Testar novas estratégias didáticas, formatos dinâmicos e
+                  metodologias ativas com a turma.
+                </p>
+              </div>
+
+              <div
+                class="glass-card p-6 rounded-2xl border-cyan-500/20 hover:border-cyan-400"
+              >
+                <div
+                  class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-4"
+                >
+                  <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">REAVALIAR</h3>
+                <p class="text-sm text-slate-300">
+                  Ter humildade para reconhecer quando o plano falhou e saber a
+                  hora de mudar.
+                </p>
+              </div>
+            </div>
+
+            <!-- Highlight Quotations -->
+            <div class="space-y-4">
+              <div
+                class="p-5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-center"
+              >
+                <p class="text-base md:text-lg text-slate-300">
+                  <span class="text-white font-semibold"
+                    >Uma estratégia que funcionou ontem não precisa ser a única
+                    possibilidade amanhã.</span
+                  >
+                </p>
+              </div>
+
+              <div
+                class="p-6 rounded-2xl bg-gradient-to-r from-blue-900/40 via-cyan-900/30 to-slate-900 border border-cyan-500/40 text-center"
+              >
+                <p class="text-lg md:text-xl font-bold text-cyan-300">
+                  "Ensinar exige curiosidade contínua e disposição genuína para
+                  continuar aprendendo."
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SLIDE 7: SABERES QUE ATRAVESSAM ÁREAS ================= -->
+      <section id="slide-7" class="slide-section" data-slide="7">
+        <div class="slide-content max-w-5xl w-full mx-auto relative">
+          <div
+            class="glass-card rounded-3xl p-8 md:p-14 border border-cyan-500/30"
+          >
+            <div class="flex items-center justify-between mb-8">
+              <span
+                class="px-3.5 py-1 rounded-full code-badge text-xs font-mono"
+                >06 • CONEXÃO INTERDISCIPLINAR</span
+              >
+              <span class="text-xs font-mono text-slate-400">07 / 08</span>
+            </div>
+
+            <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-2">
+              Saberes que atravessam áreas.
+            </h2>
+            <p class="text-slate-300 text-base md:text-lg mb-8">
+              O que podemos levar da experiência de programação para qualquer
+              sala de aula?
+            </p>
+
+            <!-- 5 Stacked Pillars with numbered badges -->
+            <div class="space-y-3.5">
+              <!-- 01 -->
+              <div
+                class="glass-card p-4 md:p-5 rounded-2xl border-cyan-500/20 flex items-center space-x-4 hover:border-cyan-400"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono font-bold flex items-center justify-center shrink-0"
+                  >01</span
+                >
+                <div>
+                  <h3 class="text-base md:text-lg font-bold text-white">
+                    PLANEJAR
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-300">
+                    Ter objetivos e etapas claras.
+                  </p>
+                </div>
+              </div>
+
+              <!-- 02 -->
+              <div
+                class="glass-card p-4 md:p-5 rounded-2xl border-cyan-500/20 flex items-center space-x-4 hover:border-cyan-400"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono font-bold flex items-center justify-center shrink-0"
+                  >02</span
+                >
+                <div>
+                  <h3 class="text-base md:text-lg font-bold text-white">
+                    RESPEITAR RITMOS
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-300">
+                    Reconhecer diferentes necessidades e tempos diferentes.
+                  </p>
+                </div>
+              </div>
+
+              <!-- 03 -->
+              <div
+                class="glass-card p-4 md:p-5 rounded-2xl border-cyan-500/20 flex items-center space-x-4 hover:border-cyan-400"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono font-bold flex items-center justify-center shrink-0"
+                  >03</span
+                >
+                <div>
+                  <h3 class="text-base md:text-lg font-bold text-white">
+                    VALORIZAR O PROCESSO
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-300">
+                    Observar cada tentativa, iteração e evolução.
+                  </p>
+                </div>
+              </div>
+
+              <!-- 04 -->
+              <div
+                class="glass-card p-4 md:p-5 rounded-2xl border-cyan-500/20 flex items-center space-x-4 hover:border-cyan-400"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono font-bold flex items-center justify-center shrink-0"
+                  >04</span
+                >
+                <div>
+                  <h3 class="text-base md:text-lg font-bold text-white">
+                    ESTIMULAR A CURIOSIDADE
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-300">
+                    Criar um ambiente seguro para pesquisar, questionar e
+                    descobrir.
+                  </p>
+                </div>
+              </div>
+
+              <!-- 05 -->
+              <div
+                class="glass-card p-4 md:p-5 rounded-2xl border-cyan-500/20 flex items-center space-x-4 hover:border-cyan-400"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono font-bold flex items-center justify-center shrink-0"
+                  >05</span
+                >
+                <div>
+                  <h3 class="text-base md:text-lg font-bold text-white">
+                    DESENVOLVER AUTONOMIA
+                  </h3>
+                  <p class="text-xs md:text-sm text-slate-300">
+                    Dar ferramentas para o estudante ser o protagonista na busca
+                    das suas próprias soluções.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SLIDE 8: PARA LEVAR COM VOCÊ / ENCERRAMENTO ================= -->
+      <section id="slide-8" class="slide-section" data-slide="8">
+        <div class="slide-content max-w-5xl w-full mx-auto relative">
+          <div
+            class="glass-card rounded-3xl p-8 md:p-16 border border-cyan-400/40 text-center relative overflow-hidden"
+          >
+            <!-- Background Orbs -->
+            <div
+              class="absolute -top-20 -left-20 w-52 h-52 rounded-full bg-blue-600/30 blur-3xl pointer-events-none"
+            ></div>
+            <div
+              class="absolute -bottom-20 -right-20 w-52 h-52 rounded-full bg-cyan-400/30 blur-3xl pointer-events-none"
+            ></div>
+
+            <div class="flex items-center justify-center mb-6">
+              <span
+                class="px-4 py-1 rounded-full code-badge text-xs font-mono tracking-widest uppercase"
+              >
+                PARA LEVAR COM VOCÊ
+              </span>
+            </div>
+
+            <!-- Dual Contrast Box -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8 text-left">
+              <div
+                class="glass-card p-6 md:p-8 rounded-2xl border-cyan-500/30 bg-slate-900/60"
+              >
+                <div class="flex items-center space-x-3 text-cyan-400 mb-3">
+                  <i data-lucide="terminal" class="w-6 h-6"></i>
+                  <span
+                    class="font-mono text-sm uppercase tracking-wider font-semibold"
+                    >Na Programação</span
+                  >
+                </div>
+                <p class="text-xl md:text-2xl font-bold text-white">
+                  "A programação me ensinou a encontrar soluções."
+                </p>
+              </div>
+
+              <div
+                class="glass-card p-6 md:p-8 rounded-2xl border-cyan-400/50 bg-cyan-950/40"
+              >
+                <div class="flex items-center space-x-3 text-cyan-300 mb-3">
+                  <i data-lucide="heart-handshake" class="w-6 h-6"></i>
+                  <span
+                    class="font-mono text-sm uppercase tracking-wider font-semibold"
+                    >Na Docência</span
+                  >
+                </div>
+                <p class="text-xl md:text-2xl font-bold text-cyan-200">
+                  "A docência me ensinou que cada pessoa precisa descobrir seu
+                  próprio caminho para encontrá-las."
+                </p>
+              </div>
+            </div>
+
+            <!-- Grand Thank You -->
+            <div class="py-8">
+              <h2
+                class="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-400 to-blue-500 mb-4 animate-pulse"
+              >
+                MUITO OBRIGADO!
+              </h2>
+              <p class="text-slate-300 font-medium text-lg">
+                Gabriel Santos de Godoy
+              </p>
+              <p class="text-sm font-mono text-cyan-400/80 mt-1">
+                Compartilhando Saberes • { aprender(); ensinar(); evoluir(); }
+              </p>
+            </div>
+
+            <!-- Interactive Action Buttons -->
+            <div class="flex flex-wrap items-center justify-center gap-4 mt-4">
+              <button
+                onclick="scrollToSlide(1)"
+                class="px-6 py-3 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm flex items-center space-x-2 transition-all shadow-lg hover:shadow-cyan-500/50"
+              >
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                <span>Reiniciar Apresentação</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Floating Toast Message Box (No browser alert) -->
+    <div
+      id="toast"
+      class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none"
+    >
+      <div
+        class="glass-card px-5 py-3 rounded-xl border border-cyan-400/60 text-cyan-200 text-sm flex items-center space-x-2 shadow-2xl"
+      >
+        <i data-lucide="check-circle" class="w-4 h-4 text-cyan-400"></i>
+        <span id="toast-message">Mensagem</span>
+      </div>
+    </div>
+
+    <script>
+      // Initialize Icons
+      lucide.createIcons();
+
+      /* ==========================================================
+       1. THREE.JS IMMERSIVE BACKGROUND (Absurd Vortex Effect)
+       ========================================================== */
+      let scene,
+        camera,
+        renderer,
+        particles,
+        particleCount = 2000;
+      let clock = new THREE.Clock();
+      let vortexMesh;
+
+      function initThree() {
+        const canvas = document.getElementById("bg-canvas");
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x030b19, 0.0015);
+
+        camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          2000,
+        );
+        camera.position.z = 120;
+
+        renderer = new THREE.WebGLRenderer({
+          canvas: canvas,
+          alpha: true,
+          antialias: true,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Criar Vórtice de Dados (Geometria TorusKnot rica em vértices)
+        const geometry = new THREE.TorusKnotGeometry(70, 25, 300, 40);
+
+        // Material com partículas brilhantes e mesclagem aditiva
+        const material = new THREE.PointsMaterial({
+          color: 0x00d2ff,
+          size: 2.5,
+          transparent: true,
+          opacity: 0.6,
+          blending: THREE.AdditiveBlending,
+        });
+
+        vortexMesh = new THREE.Points(geometry, material);
+        vortexMesh.position.set(20, 0, -50);
+        scene.add(vortexMesh);
+
+        // Partículas flutuantes ao fundo (Estrelas/Nós soltos)
+        const bgGeo = new THREE.BufferGeometry();
+        const bgPositions = new Float32Array(1000 * 3);
+        for (let i = 0; i < 3000; i += 3) {
+          bgPositions[i] = (Math.random() - 0.5) * 600;
+          bgPositions[i + 1] = (Math.random() - 0.5) * 600;
+          bgPositions[i + 2] = (Math.random() - 0.5) * 400 - 100;
+        }
+        bgGeo.setAttribute(
+          "position",
+          new THREE.BufferAttribute(bgPositions, 3),
+        );
+        const bgMat = new THREE.PointsMaterial({
+          color: 0x0070f3,
+          size: 1.5,
+          transparent: true,
+          opacity: 0.4,
+        });
+        particles = new THREE.Points(bgGeo, bgMat);
+        scene.add(particles);
+
+        window.addEventListener("resize", onWindowResize);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      function animateThree() {
+        requestAnimationFrame(animateThree);
+        const elapsedTime = clock.getElapsedTime();
+
+        // Rotacionar o Vórtice Principal de forma majestosa
+        if (vortexMesh) {
+          vortexMesh.rotation.x = elapsedTime * 0.08;
+          vortexMesh.rotation.y = elapsedTime * 0.12;
+        }
+
+        // Animação leve das partículas de fundo
+        if (particles) {
+          particles.rotation.y = elapsedTime * 0.02;
+        }
+
+        // Efeito Parallax dramático na câmera com base no scroll
+        const scrollY = window.scrollY;
+        camera.position.y = -scrollY * 0.05;
+        camera.position.x = Math.sin(scrollY * 0.001) * 10;
+        camera.rotation.z = scrollY * 0.0004;
+
+        renderer.render(scene, camera);
+      }
+
+      /* ==========================================================
+       2. INTERSECTION OBSERVER & ZOOM SCROLLYTELLING LOGIC
+       ========================================================== */
+      const sections = document.querySelectorAll(".slide-section");
+      const slideNumberEl = document.getElementById("current-slide-num");
+      const progressBar = document.getElementById("scroll-progress");
+      const navDots = document.querySelectorAll(".nav-dot");
+      let lastActiveIndex = 1;
+
+      const observerOptions = {
+        root: null,
+        threshold: 0.35,
+      };
+
+      const slideObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const slideIndex = parseInt(entry.target.getAttribute("data-slide"));
+          const content = entry.target.querySelector(".slide-content");
+
+          if (entry.isIntersecting) {
+            content.classList.add("active");
+
+            if (lastActiveIndex !== slideIndex) {
+              lastActiveIndex = slideIndex;
+              slideNumberEl.textContent = slideIndex
+                .toString()
+                .padStart(2, "0");
+              updateNavDots(slideIndex);
+
+              // Dynamically alter 3D Vórtice focus for dramatic effect per slide
+              if (vortexMesh) {
+                const scale = 1 + slideIndex * 0.1;
+                vortexMesh.scale.set(scale, scale, scale);
+                // Muda a cor sutilmente entre Ciano e Azul conforme desce
+                const hue = slideIndex % 2 === 0 ? 0x0070f3 : 0x00d2ff;
+                vortexMesh.material.color.setHex(hue);
+              }
+            }
+          }
+        });
+      }, observerOptions);
+
+      sections.forEach((section) => slideObserver.observe(section));
+
+      function updateNavDots(activeIdx) {
+        navDots.forEach((dot) => {
+          const idx = parseInt(dot.getAttribute("data-index"));
+          if (idx === activeIdx) {
+            dot.classList.add(
+              "bg-cyan-400",
+              "scale-150",
+              "ring-4",
+              "ring-cyan-500/30",
+            );
+            dot.classList.remove("bg-slate-600");
+          } else {
+            dot.classList.remove(
+              "bg-cyan-400",
+              "scale-150",
+              "ring-4",
+              "ring-cyan-500/30",
+            );
+            dot.classList.add("bg-slate-600");
+          }
+        });
+      }
+
+      // Scroll progress bar calculation
+      window.addEventListener("scroll", () => {
+        const winScroll =
+          document.documentElement.scrollTop || document.body.scrollTop;
+        const height =
+          document.documentElement.scrollHeight -
+          document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        progressBar.style.width = scrolled + "%";
+      });
+
+      /* ==========================================================
+       3. KEYBOARD & MANUAL NAVIGATION
+       ========================================================== */
+      function scrollToSlide(slideNum) {
+        const target = document.getElementById(`slide-${slideNum}`);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+
+      // Keyboard controls for Presenter (ArrowDown, ArrowUp, Space, PageDown, PageUp)
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " ") {
+          e.preventDefault();
+          const nextSlide = Math.min(lastActiveIndex + 1, 8);
+          scrollToSlide(nextSlide);
+        } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+          e.preventDefault();
+          const prevSlide = Math.max(lastActiveIndex - 1, 1);
+          scrollToSlide(prevSlide);
+        }
+      });
+
+      /* ==========================================================
+       4. FULLSCREEN & UTILITIES
+       ========================================================== */
+      const fullscreenBtn = document.getElementById("fullscreen-btn");
+      fullscreenBtn.addEventListener("click", () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+          showToast("Modo Palestra: Tela Cheia Ativada");
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+            showToast("Saiu da Tela Cheia");
+          }
+        }
+      });
+
+      function showToast(text) {
+        const toast = document.getElementById("toast");
+        const msg = document.getElementById("toast-message");
+        msg.textContent = text;
+        toast.classList.remove("translate-y-24", "opacity-0");
+        setTimeout(() => {
+          toast.classList.add("translate-y-24", "opacity-0");
+        }, 2500);
+      }
+
+      function copyShareLink() {
+        const dummy = document.createElement("input");
+        document.body.appendChild(dummy);
+        dummy.value = window.location.href;
+        dummy.select();
+        document.execCommand("copy");
+        document.body.removeChild(dummy);
+
+        const copyBtnText = document.getElementById("copy-btn-text");
+        copyBtnText.textContent = "Copiado com Sucesso!";
+        showToast("Link copiado para a área de transferência!");
+        setTimeout(() => {
+          copyBtnText.textContent = "Copiar Link";
+        }, 2500);
+      }
+
+      // Start everything on Window Load
+      window.onload = function () {
+        initThree();
+        animateThree();
+        updateNavDots(1);
+        // Trigger first slide zoom immediately
+        const firstSlide = document.querySelector("#slide-1 .slide-content");
+        if (firstSlide) firstSlide.classList.add("active");
+      };
+    </script>
+  </body>
+</html>
